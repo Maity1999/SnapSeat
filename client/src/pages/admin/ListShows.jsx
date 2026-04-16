@@ -4,10 +4,13 @@ import Loading from '../../components/Loading';
 import Title from '../../components/admin/Title';
 import { simpleDateFormat } from '../../lib/dateTime';
 import isoTimeFormat from '../../lib/isoTimeFormat';
+import { useAppContext } from '../../context/AppContext';
 
 const ListShows = () => {
 
   const currency=import.meta.env.VITE_CURRENCY
+
+  const {axios,getToken,user}=useAppContext();
 
   const [shows,setShows]=useState([]);
   const [loading,setLoading]=useState(true);
@@ -24,21 +27,26 @@ const ListShows = () => {
         //   C1:"user_3",
         // }
       // }]);
-      setShows(dummyDashboardData.activeShows.map((show)=>({
-        movie:show.movie,
-        showDateTime:show.showDateTime,
-        showPrice:show.showPrice,
-        occupiedSeats:show.occupiedSeats
-      })));
+//       setShows(dummyDashboardData.activeShows.map((show)=>({
+//         movie:show.movie,
+//         showDateTime:show.showDateTime,
+//         showPrice:show.showPrice,
+//         occupiedSeats:show.occupiedSeats
+// })));
+
+      const {data}=await axios.get('/api/admin/all-shows',{headers:{Authorization:`Bearer ${await getToken()}`}});
+      setShows(data.shows);
       setLoading(false);
     }catch(error){
-      console.error(error)
+      console.error(error);
     }
   }
 
   useEffect(()=>{
-    getAllShows();
-  },[]);
+    if(user){
+      getAllShows();
+    }
+  },[user]);
 
   return !loading ? (
     <>
