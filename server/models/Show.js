@@ -23,7 +23,7 @@ const showSchema=new Schema({
     }
 },{minimize:false});
 
-const Show=mongoose.model("Show",showSchema);
+const Show = mongoose.models.Show || mongoose.model("Show", showSchema);
 export default Show;
 
 // https://gemini.google.com/app/f24a732b7848c7ac
