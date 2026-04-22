@@ -2,6 +2,7 @@ import { Inngest } from "inngest";
 import User from "../models/User.js";
 import Booking from "../models/Booking.js";
 import Show from "../models/Show.js";
+import sendEmail from "../configs/nodeMailer.js";
 
 // Create a client to send and receive events
 export const inngest = new Inngest({ id: "SnapSeat" });
@@ -53,11 +54,11 @@ async({event})=>{
 const releaseSeatsAndDeleteBooking=inngest.createFunction(
     {id:'release-seats-and-delete-booking'},
     {event:'app/checkpayment'},
-    async({event,step})=>{
+    async ({event,step})=>{
         const tenMinutesLater=new Date(Date.now()+10*60*1000);
         await step.sleepUntil('wait-for-10-minutes',tenMinutesLater);
 
-        await step.run('check-payment-status',async()=>{
+        await step.run('check-payment-status',async ()=>{
             const bookingId=event.data.bookingId;
             const booking=await Booking.findById(bookingId);
 
@@ -75,10 +76,56 @@ const releaseSeatsAndDeleteBooking=inngest.createFunction(
     }
 );
 
+// Inngest function to send an email when user books a show
+const sendBookingConfirmationEmail=inngest.createFunction(
+    {id:'send-booking-confirmation-email'},
+    {event:'app/show.booked'},
+    async ({event,step})=>{
+        const {bookingId}=event.data;
+        const booking=await Booking.findById(bookingId).populate({
+            path:'show',
+            populate:{path:"movie",model:"Movie"}
+        }).populate('user');     
+    
+
+    await sendEmail({
+        to:booking.User.email,
+        subject:`Payment Confirmation : "${booking.show.movie.title}" booked`,
+        body:`<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <h2 style="color: #2c3e50;">Hi ${booking.user.name},</h2>
+                
+                <p>Your booking for <strong style="color: #F84565;">"${booking.show.movie.title}"</strong> is confirmed!</p>
+                
+                <p>
+                    <strong>Date:</strong> ${new Date(booking.show.showDateTime).toLocaleDateString('en-US', { 
+                        timeZone: 'Asia/Kolkata',
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    })}<br/>
+                    
+                    <strong>Time:</strong> ${new Date(booking.show.showDateTime).toLocaleTimeString('en-US', { 
+                        timeZone: 'Asia/Kolkata',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    })}
+                </p>
+                
+                <p>Enjoy the show! 🍿</p>
+                
+                <p>Thanks for booking with us!<br/>
+                — <strong>The SnapSeat Team</strong></p>
+            </div>`
+    });
+    }
+);
+
 // Create an empty array where we'll export future Inngest functions
 export const functions = [
     syncUserCreation,
     syncUserDeletion,
     syncUserUpdate,
-    releaseSeatsAndDeleteBooking
+    releaseSeatsAndDeleteBooking,
+    sendBookingConfirmationEmail,
 ];
