@@ -36,10 +36,11 @@ export const stripeWebhooks = async(req,res)=>{
                     name:"app/show.booked",
                     data:{bookingId}
                 })
-            }
-                
+
                 break;
-        
+
+            }
+                        
             default:
                 console.log("Unhandled event type:",event.type);
         }
